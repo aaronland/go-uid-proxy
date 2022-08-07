@@ -28,10 +28,6 @@ type ProxyProvider struct {
 	refill   chan bool
 }
 
-type ProxyUID struct {
-	uid.UID
-}
-
 func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 
 	u, err := url.Parse(uri)
@@ -51,7 +47,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	pool_uri := q.Get("pool")
 
 	if pool_uri == "" {
-		return nil, fmt.Errorf("Missing ?pool parameter")
+		pool_uri = "memory://"
 	}
 
 	source_pr, err := uid.NewProvider(ctx, source_uri)
@@ -69,7 +65,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	logger := log.Default()
 
 	workers := 10
-	minimum := 1
+	minimum := 5
 
 	refill := make(chan bool)
 
