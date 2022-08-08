@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"context"
-	"fmt"
+	_ "fmt"
 	"github.com/aaronland/go-uid"
 	"testing"
 )
@@ -21,12 +21,10 @@ func TestProxyProvider(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 
-		u, err := pr.UID(ctx)
+		_, err := pr.UID(ctx)
 
 		if err != nil {
 			t.Fatalf("Failed to generate UID, %v", err)
 		}
-
-		fmt.Println(u)
 	}
 }

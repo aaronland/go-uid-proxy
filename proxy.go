@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aaronland/go-pool/v2"
 	"github.com/aaronland/go-uid"
+	"io"
 	"log"
 	"net/url"
 	"sync"
@@ -62,7 +63,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 		return nil, fmt.Errorf("Failed to create pool, %w", err)
 	}
 
-	logger := log.Default()
+	logger := log.New(io.Discard, "", 0)
 
 	workers := 10
 	minimum := 5
@@ -82,6 +83,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	go pr.status(ctx)
 	go pr.monitor(ctx)
 
+	refill <- true
 	return pr, nil
 }
 
@@ -89,15 +91,16 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 
 	if pr.pool.Length(ctx) == 0 {
 
-		go pr.refillPool(ctx)
-
 		pr.logger.Printf("pool length is 0 so fetching integer from source")
+
+		go pr.refillPool(ctx)
 		return pr.provider.UID(ctx, args...)
 	}
 
 	v, ok := pr.pool.Pop(ctx)
 
 	if !ok {
+
 		pr.logger.Printf("failed to pop UID!")
 
 		go pr.refillPool(ctx)
@@ -107,10 +110,17 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 	return v.(uid.UID), nil
 }
 
+func (pr *ProxyProvider) SetLogger(ctx context.Context, logger *log.Logger) error {
+	pr.logger = logger
+	return nil
+}
+
 func (pr *ProxyProvider) status(ctx context.Context) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-time.After(5 * time.Second):
 			pr.logger.Printf("pool length: %d", pr.pool.Length(ctx))
 		}
@@ -121,6 +131,8 @@ func (pr *ProxyProvider) monitor(ctx context.Context) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-time.After(10 * time.Second):
 			if pr.pool.Length(ctx) < int64(pr.minimum) {
 				go pr.refillPool(ctx)
@@ -136,8 +148,9 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 	// and refill the pool simultaneously. First, we block until a slot opens
 	// up.
 
+	pr.logger.Println("REFILL 1")
 	<-pr.refill
-
+	pr.logger.Println("REFILL 2")
 	t1 := time.Now()
 
 	// Figure out how many integers we need to get *at this moment* which when
