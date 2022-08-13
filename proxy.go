@@ -66,7 +66,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	logger := log.New(io.Discard, "", 0)
 
 	workers := 10
-	minimum := 5
+	minimum := 0
 
 	refill := make(chan bool)
 
@@ -83,7 +83,10 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	go pr.status(ctx)
 	go pr.monitor(ctx)
 
-	refill <- true
+	if minimum > 0 {
+		refill <- true
+	}
+
 	return pr, nil
 }
 
@@ -144,13 +147,17 @@ func (pr *ProxyProvider) monitor(ctx context.Context) {
 
 func (pr *ProxyProvider) refillPool(ctx context.Context) {
 
+	if pr.minimum == 0 {
+		pr.refill <- true
+		return
+	}
+
 	// Remember there is a fixed size work queue of allowable times to try
 	// and refill the pool simultaneously. First, we block until a slot opens
 	// up.
 
-	pr.logger.Println("REFILL 1")
 	<-pr.refill
-	pr.logger.Println("REFILL 2")
+
 	t1 := time.Now()
 
 	// Figure out how many integers we need to get *at this moment* which when

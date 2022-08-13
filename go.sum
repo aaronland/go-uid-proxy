@@ -4,5 +4,5 @@ github.com/aaronland/go-roster v1.0.0 h1:FRDGrTqsYySKjWnAhbBGXyeGlI/o5/t9FZYCbUm
 github.com/aaronland/go-roster v1.0.0/go.mod h1:KIsYZgrJlAsyb9LsXSCvlqvbcCBVjCSqcQiZx42i9ro=
 github.com/aaronland/go-string v1.0.0 h1:fPHmC1i9JhGzgi4qdCSXKc4xTCaLLe0uvlJMu9dHhco=
 github.com/aaronland/go-string v1.0.0/go.mod h1:URh3Au/fNbM0++WjBseurE3QTp875wiJ9ImrecD+7tI=
-github.com/aaronland/go-uid v0.2.0 h1:EDP1mSvP2bs75e/mGivwLO3oRVslkVIy0vNDtlGB+uc=
-github.com/aaronland/go-uid v0.2.0/go.mod h1:HwQ09mooJ8j684z3W5lPKO6Odf557O6h3P3o1PquqXE=
+github.com/aaronland/go-uid v0.3.0 h1:RI/MyMobd21V9bRQ0iDbVf1lu7vtESwVhfVqipY1jfs=
+github.com/aaronland/go-uid v0.3.0/go.mod h1:HwQ09mooJ8j684z3W5lPKO6Odf557O6h3P3o1PquqXE=
