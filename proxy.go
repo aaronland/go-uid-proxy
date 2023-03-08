@@ -3,13 +3,15 @@ package proxy
 import (
 	"context"
 	"fmt"
-	"github.com/aaronland/go-pool/v2"
-	"github.com/aaronland/go-uid"
 	"io"
 	"log"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/aaronland/go-pool/v2"
+	"github.com/aaronland/go-uid"
 )
 
 const PROXY_SCHEME string = "proxy"
@@ -31,6 +33,9 @@ type ProxyProvider struct {
 
 func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 
+	workers := 10
+	minimum := 0
+
 	u, err := url.Parse(uri)
 
 	if err != nil {
@@ -51,6 +56,32 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 		pool_uri = "memory://"
 	}
 
+	str_workers := q.Get("workers")
+
+	if str_workers != "" {
+
+		v, err := strconv.Atoi(str_workers)
+
+		if err != nil {
+			return nil, fmt.Errorf("Invalid ?workers parameter")
+		}
+
+		workers = v
+	}
+
+	str_minimum := q.Get("minimum")
+
+	if str_minimum != "" {
+
+		v, err := strconv.Atoi(str_minimum)
+
+		if err != nil {
+			return nil, fmt.Errorf("Invalid ?minimum parameter")
+		}
+
+		minimum = v
+	}
+
 	source_pr, err := uid.NewProvider(ctx, source_uri)
 
 	if err != nil {
@@ -64,9 +95,6 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 	}
 
 	logger := log.New(io.Discard, "", 0)
-
-	workers := 10
-	minimum := 0
 
 	refill := make(chan bool)
 
