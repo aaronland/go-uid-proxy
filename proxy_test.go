@@ -13,7 +13,7 @@ func TestProxyProvider(t *testing.T) {
 
 	ctx := context.Background()
 
-	uri := "proxy://?provider=random://?minimum=5"
+	uri := "proxy://?provider=random://&minimum=5"
 
 	pr, err := uid.NewProvider(ctx, uri)
 

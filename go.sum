@@ -1,3 +1,5 @@
+github.com/aaronland/go-log/v2 v2.0.0 h1:lMoaVDHd4Etaz2+ibze3ReqvHHG68z2SpuxYXv12WlE=
+github.com/aaronland/go-log/v2 v2.0.0/go.mod h1:jOLBCaHVyOC7DQpbVFFQSiuU8CA8MRMrqA1mMSJQtLs=
 github.com/aaronland/go-pool/v2 v2.0.0 h1:3nYPErb875nXxrEGKhSNFqxR7rt9bMmeusbU8RuEksg=
 github.com/aaronland/go-pool/v2 v2.0.0/go.mod h1:2Yx7B3wLvg4qjxMDvDRseob7p0pgf/btsLfZ3NnIDlg=
 github.com/aaronland/go-roster v1.0.0 h1:FRDGrTqsYySKjWnAhbBGXyeGlI/o5/t9FZYCbUmyQtI=
