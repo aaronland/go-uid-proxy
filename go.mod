@@ -3,8 +3,9 @@ module github.com/aaronland/go-uid-proxy
 go 1.18
 
 require (
+	github.com/aaronland/go-log/v2 v2.0.0
 	github.com/aaronland/go-pool/v2 v2.0.0
-	github.com/aaronland/go-uid v0.3.0
+	github.com/aaronland/go-uid v0.4.0
 )
 
 require (
