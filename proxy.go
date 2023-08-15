@@ -139,7 +139,7 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 		return pr.provider.UID(ctx, args...)
 	}
 
-	return v.(uid.UID), nil
+	return v.(uid.UID), nil	
 }
 
 func (pr *ProxyProvider) SetLogger(ctx context.Context, logger *log.Logger) error {
