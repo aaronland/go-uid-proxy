@@ -3,10 +3,9 @@ package proxy
 import (
 	"context"
 	"fmt"
-	"github.com/aaronland/go-uid"
-	"log"
-	"os"
 	"testing"
+
+	"github.com/aaronland/go-uid"
 )
 
 func TestProxyProvider(t *testing.T) {
@@ -20,9 +19,6 @@ func TestProxyProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create new provider for %s, %v", uri, err)
 	}
-
-	logger := log.New(os.Stdout, "", 0)
-	pr.SetLogger(ctx, logger)
 
 	for i := 0; i < 5; i++ {
 
