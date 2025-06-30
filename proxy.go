@@ -114,7 +114,7 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 		refilling: new(atomic.Bool),
 	}
 
-	go pr.refillPool(ctx)
+	// go pr.refillPool(ctx)
 	go pr.monitor(ctx)
 
 	if status_monitor {
@@ -137,6 +137,7 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 		done_ch := make(chan bool)
 
 		go func() {
+		   slog.Info("GO")
 			pr.refillPool(ctx)
 			done_ch <- true
 		}()
@@ -147,6 +148,7 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 				return pr.provider.UID(ctx, args...)
 			case <-ticker.C:
 				count := pr.pool.Length(ctx)
+			     slog.Info("TICK", "count", count)				
 				if count > 0 {
 					slog.Debug("Pool has count, try again", "count", count)
 					return pr.provider.UID(ctx, args...)
@@ -208,14 +210,17 @@ func (pr *ProxyProvider) monitor(ctx context.Context) {
 func (pr *ProxyProvider) refillPool(ctx context.Context) {
 
 	if pr.refilling.Load() {
+	slog.Info("REFILLING SKIP")
 		return
 	}
 
+     slog.Info("START REFILLING")
+     
 	pr.refilling.Swap(true)
 	defer pr.refilling.Swap(false)
 
 	if pr.minimum == 0 {
-		return
+		pr.minimum = 1
 	}
 
 	t1 := time.Now()
@@ -263,8 +268,12 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 		// Wait for the throttle to open a slot. Also record whether
 		// the operation was successful.
 
+		slog.Info("J", "j", j)
+		
 		rsp := <-th
 
+		slog.Info("WOO", "rsp", rsp)
+		
 		if rsp == true {
 			success += 1
 		} else {
@@ -303,13 +312,21 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 
 func (pr *ProxyProvider) addToPool(ctx context.Context) bool {
 
+     ctx, cancel := context.WithTimeout(ctx, 3 * time.Second)
+     defer cancel()
+     
+     slog.Info("ADD TO POO")
+     slog.Info("ADDING TO POO")
 	i, err := pr.provider.UID(ctx)
 
+	slog.Info("POO POO POO")
+	slog.Info("WUT", "i", i, "errr", err)
 	if err != nil {
 		slog.Error("Failed to create new UID to add to pool", "error", err)
 		return false
 	}
 
+	slog.Info("PUSH", "i", i)
 	pr.pool.Push(ctx, i)
 	return true
 }
