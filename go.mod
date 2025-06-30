@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/aaronland/go-pool/v2 v2.0.0
-	github.com/aaronland/go-uid v0.4.0
+	github.com/aaronland/go-uid v0.5.0
 )
 
 require (

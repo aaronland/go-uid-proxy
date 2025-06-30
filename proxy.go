@@ -3,7 +3,6 @@ package proxy
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -24,7 +23,6 @@ func init() {
 type ProxyProvider struct {
 	uid.Provider
 	provider uid.Provider
-	logger   *log.Logger
 	workers  int
 	minimum  int
 	pool     pool.Pool
@@ -146,18 +144,13 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 
 	if !ok {
 
-		slog.Info("Failed to pop UID")
+		slog.Warn("Failed to pop UID")
 
 		go pr.refillPool(ctx)
 		return pr.provider.UID(ctx, args...)
 	}
 
 	return v.(uid.UID), nil
-}
-
-func (pr *ProxyProvider) SetLogger(ctx context.Context, logger *log.Logger) error {
-	slog.Warn("SetLogger is deprecated and a no/op. Please set default log/slog level instead.")
-	return nil
 }
 
 func (pr *ProxyProvider) status(ctx context.Context) {
