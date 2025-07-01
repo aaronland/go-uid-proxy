@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aaronland/go-pool/v2"
@@ -22,11 +23,11 @@ func init() {
 
 type ProxyProvider struct {
 	uid.Provider
-	provider uid.Provider
-	workers  int
-	minimum  int
-	pool     pool.Pool
-	refill   chan bool
+	provider  uid.Provider
+	workers   int
+	minimum   int
+	pool      pool.Pool
+	refilling *atomic.Bool
 }
 
 func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
@@ -105,26 +106,19 @@ func NewProxyProvider(ctx context.Context, uri string) (uid.Provider, error) {
 		return nil, fmt.Errorf("Failed to create pool, %w", err)
 	}
 
-	refill := make(chan bool)
-
 	pr := &ProxyProvider{
-		provider: source_pr,
-		pool:     pl,
-		workers:  workers,
-		minimum:  minimum,
-		refill:   refill,
+		provider:  source_pr,
+		pool:      pl,
+		workers:   workers,
+		minimum:   minimum,
+		refilling: new(atomic.Bool),
 	}
 
-	go pr.refillPool(ctx)
 	go pr.monitor(ctx)
 
 	if status_monitor {
 		slog.Debug("Starting status monitor")
 		go pr.status(ctx)
-	}
-
-	if minimum > 0 {
-		refill <- true
 	}
 
 	return pr, nil
@@ -136,17 +130,44 @@ func (pr *ProxyProvider) UID(ctx context.Context, args ...interface{}) (uid.UID,
 
 		slog.Debug("Pool length is 0 so fetching integer from source")
 
-		go pr.refillPool(ctx)
-		return pr.provider.UID(ctx, args...)
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		done_ch := make(chan bool)
+
+		go func() {
+			pr.refillPool(ctx)
+			done_ch <- true
+		}()
+
+		for {
+			select {
+			case <-done_ch:
+				return pr.provider.UID(ctx, args...)
+			case <-ticker.C:
+				count := pr.pool.Length(ctx)
+				if count > 0 {
+					slog.Debug("Pool has count, try again", "count", count)
+					return pr.provider.UID(ctx, args...)
+				}
+			}
+		}
 	}
 
 	v, ok := pr.pool.Pop(ctx)
 
 	if !ok {
 
-		slog.Warn("Failed to pop UID")
+		slog.Warn("Failed to pop UID from pool")
 
-		go pr.refillPool(ctx)
+		done_ch := make(chan bool)
+
+		go func() {
+			pr.refillPool(ctx)
+			done_ch <- true
+		}()
+
+		<-done_ch
 		return pr.provider.UID(ctx, args...)
 	}
 
@@ -183,20 +204,16 @@ func (pr *ProxyProvider) monitor(ctx context.Context) {
 
 func (pr *ProxyProvider) refillPool(ctx context.Context) {
 
-	if pr.minimum == 0 {
-		pr.refill <- true
+	if pr.refilling.Load() {
 		return
 	}
 
-	// Remember there is a fixed size work queue of allowable times to try
-	// and refill the pool simultaneously. First, we block until a slot opens
-	// up.
+	pr.refilling.Swap(true)
+	defer pr.refilling.Swap(false)
 
-	slog.Debug("Refill pool Waiting for work queue.")
-
-	<-pr.refill
-
-	slog.Debug("Start refilling pool.")
+	if pr.minimum == 0 {
+		pr.minimum = 1
+	}
 
 	t1 := time.Now()
 
@@ -218,6 +235,8 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 		workers = 1
 	}
 
+	slog.Debug("Start refilling pool.", "workers", workers, "to do", todo)
+
 	// Now we're going to set up two simultaneous queues. One (the work group) is
 	// just there to keep track of all the requests for new integers we need to
 	// make. The second (the throttle) is there to make sure we don't exhaust all
@@ -231,7 +250,7 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 
 	wg := new(sync.WaitGroup)
 
-	slog.Info("Refill pool", "count", todo, "workers", workers)
+	slog.Debug("Refill pool", "count", todo, "workers", workers)
 
 	success := 0
 	failed := 0
@@ -252,7 +271,7 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 		// First check that we still actually need to keep fetching integers
 
 		if pr.pool.Length(ctx) >= int64(pr.minimum) {
-			slog.Info("Pool is full", "count", pr.pool.Length(ctx), "iterations", j)
+			slog.Debug("Pool is full", "count", pr.pool.Length(ctx), "iterations", j)
 			break
 		}
 
@@ -273,10 +292,6 @@ func (pr *ProxyProvider) refillPool(ctx context.Context) {
 	// More standard work group stuff
 
 	wg.Wait()
-
-	// Again note the way we are freeing a spot in the refill queue
-
-	pr.refill <- true
 
 	t2 := time.Since(t1)
 	slog.Debug("Pool refilled", "count", todo, "successful", success, "failed", failed, "total", pr.pool.Length(ctx), "time to complete", fmt.Sprintf("%v", t2))
